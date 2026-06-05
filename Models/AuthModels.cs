@@ -23,9 +23,5 @@
         public string? Role { get; set; }
     }
 
-    public class yeah
-    {
-
-    }
     
 }
