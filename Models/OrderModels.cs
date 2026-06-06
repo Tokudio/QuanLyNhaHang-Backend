@@ -5,6 +5,8 @@
     {
         public string LoaiDonHang { get; set; } = null!;
         public string PhuongThucThanhToan { get; set; } = null!;
+        public int? MaBan { get; set; }
+        public string? GhiChu { get; set; }
         public List<ChiTietDonHangDTO> ChiTietDonHang { get; set; } = new List<ChiTietDonHangDTO>();
     }
 
