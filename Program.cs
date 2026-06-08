@@ -26,7 +26,7 @@ namespace QuanLyNhaHangAPI
 
             // 2. Kích hoạt Dependency Injection cho AuthService
             builder.Services.AddScoped<IAuthService, AuthService>();
-
+            builder.Services.AddScoped<VNPayService>();
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
