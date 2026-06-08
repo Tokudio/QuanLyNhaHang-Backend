@@ -5,7 +5,6 @@ using Microsoft.IdentityModel.Tokens;
 using QuanLyNhaHangAPI.Data;
 using QuanLyNhaHangAPI.Services;
 using System.Text;
-using Microsoft.Data.SqlClient;
 
 namespace QuanLyNhaHangAPI
 {
@@ -15,14 +14,11 @@ namespace QuanLyNhaHangAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
-
-
             var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
 
             Console.WriteLine("=================================");
             Console.WriteLine(connStr);
             Console.WriteLine("=================================");
-            // Add services to the container.
 
             // 1. Cấu hình kết nối SQL Server Database
             builder.Services.AddDbContext<QuanLyNhaHangDbContext>(options =>
@@ -32,7 +28,6 @@ namespace QuanLyNhaHangAPI
             builder.Services.AddScoped<IAuthService, AuthService>();
 
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
@@ -57,15 +52,21 @@ namespace QuanLyNhaHangAPI
                 };
             });
 
-            // 4. Mở chính sách CORS cho phép Angular kết nối
+            // =========================================================================
+            // SỬA TẠI ĐÂY: Gộp chung các domain Frontend vào 1 chính sách CORS duy nhất
+            // =========================================================================
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowAngular", policy =>
+                options.AddPolicy("AllowFrontends", policy =>
                 {
-                    policy.WithOrigins("http://localhost:4200") // Cổng chạy Angular mặc định
+                    policy.WithOrigins(
+                              "http://localhost:4200",  // Cổng chạy Angular mặc định
+                              "https://localhost:7144", // Cổng HTTPS của Blazor WASM
+                              "http://localhost:5000"   // Cổng HTTP của Blazor WASM
+                          )
                           .AllowAnyHeader()
                           .AllowAnyMethod()
-                          .AllowCredentials();
+                          .AllowCredentials(); // Bắt buộc nếu bạn dùng Cookie hoặc xác thực nâng cao qua CORS
                 });
             });
 
@@ -78,20 +79,24 @@ namespace QuanLyNhaHangAPI
                 app.UseSwaggerUI();
             }
 
-            app.UseCors("AllowAngular"); // Áp dụng CORS trước Authentication
+            // =========================================================================
+            // SỬA TẠI ĐÂY: Chỉ gọi UseCors MỘT LẦN duy nhất với chính sách chung
+            // =========================================================================
+            app.UseCors("AllowFrontends");
 
             app.UseHttpsRedirection();
 
+            // Lưu ý: Thứ tự chuẩn là UseCors -> UseAuthentication -> UseAuthorization
+            app.UseAuthentication();
             app.UseAuthorization();
 
-
             app.MapControllers();
+
+            // Đoạn code Hash lại mật khẩu tự động của bạn giữ nguyên
             using (var scope = app.Services.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<QuanLyNhaHangDbContext>();
-
                 var users = context.NguoiDung.ToList();
-
                 foreach (var user in users)
                 {
                     if (!user.MatKhau.StartsWith("$2"))
@@ -99,11 +104,10 @@ namespace QuanLyNhaHangAPI
                         user.MatKhau = BCrypt.Net.BCrypt.HashPassword(user.MatKhau);
                     }
                 }
-
                 context.SaveChanges();
             }
-            app.Run();
 
+            app.Run();
         }
     }
 }
