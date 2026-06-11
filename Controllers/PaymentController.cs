@@ -13,6 +13,7 @@ public class PaymentController : ControllerBase
 {
     private readonly VNPayService _vnPayService;
     private readonly QuanLyNhaHangDbContext _context;
+
     public PaymentController(VNPayService vnPayService, QuanLyNhaHangDbContext context)
     {
         _vnPayService = vnPayService;
@@ -39,12 +40,10 @@ public class PaymentController : ControllerBase
             if (!paymentMethod.Equals("VNPay", StringComparison.OrdinalIgnoreCase))
                 return BadRequest(new { isSuccess = false, message = $"Phương thức không hợp lệ: {paymentMethod}" });
 
-            // ... (phần code tạo orderId, paymentUrl, donHang giữ nguyên như cũ)
-
             string orderId = "DH" + DateTime.Now.Ticks.ToString();
             string clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
 
-            // THÊM ĐOẠN NÀY: Nếu là IPv6 localhost thì chuyển về IPv4 chuẩn
+            // Nếu là IPv6 localhost thì chuyển về IPv4 chuẩn
             if (clientIp == "::1")
             {
                 clientIp = "127.0.0.1";
@@ -97,13 +96,17 @@ public class PaymentController : ControllerBase
     [HttpGet("vnpay-return")]
     public async Task<IActionResult> VnpayReturn()
     {
+        // 1. Khai báo chính xác cổng Frontend Blazor của bạn
+        string frontendUrl = "https://localhost:7144";
+
+        // Kiểm tra chữ ký bảo mật
         if (!_vnPayService.ValidateSignature(Request.Query))
         {
-            return Redirect("/payment-failed?message=Invalid signature");
+            return Redirect($"{frontendUrl}/payment-failed?message=Invalid_signature");
         }
 
-        string vnp_TxnRef = Request.Query["vnp_TxnRef"].ToString();
-        string vnp_ResponseCode = Request.Query["vnp_ResponseCode"].ToString();
+        string vnp_TxnRef = Request.Query["vnp_TxnRef"].ToString() ?? "";
+        string vnp_ResponseCode = Request.Query["vnp_ResponseCode"].ToString() ?? "";
 
         var donHang = await _context.DonHang.FirstOrDefaultAsync(x => x.MaGiaoDichVnpay == vnp_TxnRef);
 
@@ -111,18 +114,29 @@ public class PaymentController : ControllerBase
         {
             if (vnp_ResponseCode == "00")
             {
-                donHang.TrangThaiThanhToan = "Đã thanh toán";
+                // KHỚP VỚI ĐIỀU KIỆN 1 CỦA DATABASE
+                donHang.TrangThaiThanhToan = "Đã thanh toán online";
                 donHang.TrangThaiDon = "Chờ xác nhận";
             }
             else
             {
-                donHang.TrangThaiDon = "Thanh toán thất bại";
+                // KHỚP VỚI ĐIỀU KIỆN 3 CỦA DATABASE
+                donHang.TrangThaiThanhToan = "Chưa thanh toán";
+                donHang.TrangThaiDon = "Đã hủy";
             }
+
+            // Lưu xuống DB sẽ mượt mà, không bị chặn nữa
             await _context.SaveChangesAsync();
         }
 
-        return Redirect(vnp_ResponseCode == "00"
-            ? $"/payment-success?orderId={vnp_TxnRef}"
-            : "/payment-failed");
+        // 2. Điều hướng chính xác về cổng Frontend (7144) kèm theo OrderId
+        if (vnp_ResponseCode == "00")
+        {
+            return Redirect($"{frontendUrl}/payment-success?OrderId={vnp_TxnRef}");
+        }
+        else
+        {
+            return Redirect($"{frontendUrl}/payment-failed?OrderId={vnp_TxnRef}");
+        }
     }
 }
