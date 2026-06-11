@@ -1,6 +1,6 @@
 ﻿namespace QuanLyNhaHangAPI.Models
 {
-    // === CÁC MODEL CŨ (Giữ nguyên) ===
+    // === CÁC MODEL DÀNH CHO DANH SÁCH BÀN VÀ ĐƠN MỚI ===
     public class BanAnDto
     {
         public int MaBan { get; set; }
@@ -26,8 +26,7 @@
         public T? Data { get; set; }
     }
 
-    // === CÁC MODEL MỚI BỔ SUNG CHO CHỨC NĂNG POS ===
-
+    // === CÁC MODEL BỔ SUNG CHO CHỨC NĂNG POS ===
     public class ChiTietDonHangDto
     {
         public int MaChiTiet { get; set; }
@@ -53,7 +52,8 @@
 
     public class ThemMonVaoDonRequest
     {
-        public int MaDonHang { get; set; }
+        public int MaDonHang { get; set; } // Nếu = 0 thì backend sẽ tự tạo đơn mới
+        public int? MaBan { get; set; }    // Mã bàn (Nếu null hoặc = 0 thì hiểu là khách Mang về)
         public int MaMonAn { get; set; }
         public int SoLuong { get; set; }
     }

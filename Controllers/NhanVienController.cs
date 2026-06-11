@@ -7,7 +7,7 @@ namespace QuanLyNhaHangAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Nhân viên,Admin")]
+    [Authorize(Roles = "Phục vụ, Nhà bếp")]
     public class NhanVienController : ControllerBase
     {
         private readonly INhanVienService _nhanVienService;
@@ -40,8 +40,8 @@ namespace QuanLyNhaHangAPI.Controllers
         public async Task<IActionResult> GetDonHangTheoBan(int maBan)
         {
             var result = await _nhanVienService.LayDonHangHienTaiTheoBanAsync(maBan);
-            if (!result.IsSuccess) return NotFound(result); // Trả về 404 nếu bàn trống
-            return Ok(result.Data); // Trả thẳng Data để Model Angular nhận (DonHangHienTaiDto)
+            if (!result.IsSuccess) return NotFound(result); // Bàn chưa có đơn hàng trả về 404
+            return Ok(result.Data);
         }
 
         // [PUT] /api/nhanvien/chi-tiet/{maChiTiet}/so-luong
@@ -57,6 +57,7 @@ namespace QuanLyNhaHangAPI.Controllers
         [HttpPost("don-hang/them-mon")]
         public async Task<IActionResult> AddMonVaoDon([FromBody] ThemMonVaoDonRequest request)
         {
+            // Result lúc này mang kiểu dữ liệu NhanVienApiResponse<int>
             var result = await _nhanVienService.ThemMonVaoDonHienTaiAsync(request);
             if (!result.IsSuccess) return BadRequest(result);
             return Ok(result);
